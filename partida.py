@@ -1,11 +1,11 @@
 from arimaa import Arimaa
 from ia_jogador import IAJogador
-from mini_qlearning_jogador import MiniQLearningJogador
 
 class Partida:
-    def __init__(self):
+    def __init__(self, humano='Ouro'):  # 'Ouro', 'Prata' ou None para IA vs IA
         self.jogo = Arimaa()
-        self.ia_ouro = MiniQLearningJogador(jogador='Ouro')
+        self.humano = humano
+        self.ia_ouro = IAJogador(profundidade=2, jogador='Ouro')
         self.ia_prata = IAJogador(profundidade=2, jogador='Prata')
         self.max_turnos = 200
         self.turnos = 0
@@ -28,7 +28,7 @@ class Partida:
         return (len(pos_ouro), tuple(sorted(pos_ouro)), len(pos_prata), tuple(sorted(pos_prata)))
 
     def jogar(self):
-        print("Arimaa Automático: Minimax vs Minimax\n")
+        print("Arimaa: Humano vs Minimax\n")
         while not self.jogo.fim:
             self.jogo.mostrar()
             print(f"Turno de: {self.jogo.jogador}")
@@ -68,14 +68,17 @@ class Partida:
 
             self.ultimo_estado_coelhos = estado_atual_coelhos
 
-            # Fluxo de jogada IA vs IA
+            # Jogada
             if self.jogo.mov_restantes == 4:
-                if self.jogo.jogador == 'Prata':
-                    movimentos = self.ia_prata.melhor_jogada(self.jogo)
-                    jogador_nome = "Prata"
-                else:
+                if self.jogo.jogador == self.humano:
+                    movimentos = self.input_movimentos_humano()
+                    jogador_nome = "Humano"
+                elif self.jogo.jogador == 'Ouro':
                     movimentos = self.ia_ouro.melhor_jogada(self.jogo)
-                    jogador_nome = "Ouro"
+                    jogador_nome = "Ouro (IA)"
+                else:
+                    movimentos = self.ia_prata.melhor_jogada(self.jogo)
+                    jogador_nome = "Prata (IA)"
 
                 if movimentos:
                     for mov in movimentos:
@@ -105,5 +108,31 @@ class Partida:
                 self.turnos += 1
                 continue
 
+    def input_movimentos_humano(self):
+        movimentos = []
+        while self.jogo.mov_restantes > 0 and not self.jogo.fim:
+            entrada = input("Digite sua jogada (ex: a2 baixo): ").strip().lower().split()
+            if len(entrada) != 2:
+                print("Formato inválido. Exemplo: a2 baixo")
+                continue
+            pos, dir = entrada
+            if len(pos) != 2 or pos[0] not in 'abcdefgh' or pos[1] not in '12345678':
+                print("Posição inválida. Exemplo: a2")
+                continue
+            y = ord(pos[0]) - ord('a')
+            x = 8 - int(pos[1])
+            if not self.jogo.validar_movimento(x, y, dir):
+                print("Movimento inválido! Tente de novo.")
+                continue
+            movimentos.append((x, y, dir))
+            self.jogo = self.jogo.executar_movimento((x, y), dir)
+            self.jogo.processar_capturas()
+            if self.jogo.fim:
+                break
+        return movimentos
+
 if __name__ == "__main__":
-    Partida().jogar()
+    # Jogue como Ouro: humano='Ouro'
+    # Jogue como Prata: humano='Prata'
+    # Só IA vs IA: humano=None
+    Partida(humano='Ouro').jogar()
